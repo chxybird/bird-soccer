@@ -1,0 +1,72 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<beans xmlns="http://www.springframework.org/schema/beans"
+       xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+       xmlns:context="http://www.springframework.org/schema/context"
+       xmlns:aop="http://www.springframework.org/schema/aop"
+       xmlns:tx="http://www.springframework.org/schema/tx"
+       xsi:schemaLocation="http://www.springframework.org/schema/beans
+	http://www.springframework.org/schema/beans/spring-beans.xsd
+	http://www.springframework.org/schema/context
+	http://www.springframework.org/schema/context/spring-context.xsd
+	http://www.springframework.org/schema/aop
+	http://www.springframework.org/schema/aop/spring-aop.xsd
+	http://www.springframework.org/schema/tx
+	http://www.springframework.org/schema/tx/spring-tx.xsd">
+
+    <!--  开启注解扫描  -->
+    <context:component-scan base-package="domain"></context:component-scan>
+    <context:component-scan base-package="dao"></context:component-scan>
+    <context:component-scan base-package="service"></context:component-scan>
+
+    <!--  spring整合mybatis框架  -->
+    <!--  配置国产阿里巴巴druid连接池  -->
+    <bean id="druid" class="com.alibaba.druid.pool.DruidDataSource">
+        <property name="driverClassName" value="com.mysql.jdbc.Driver"></property>
+        <property name="url" value="jdbc:mysql:///team"></property>
+        <property name="username" value="root"></property>
+        <property name="password" value="root"></property>
+    </bean>
+    <!--  配置sqlsessionfactory工厂  这个类是整合jar的类，不是独立mybatis的类-->
+    <bean id="sqlsessionfactory" class="org.mybatis.spring.SqlSessionFactoryBean">
+        <property name="dataSource" ref="druid"></property>
+        <!-- 传入PageHelper的插件 -->
+        <property name="plugins">
+            <array>
+                <!-- 传入插件的对象 -->
+                <bean class="com.github.pagehelper.PageInterceptor">
+                    <property name="properties">
+                        <props>
+                            <prop key="helperDialect">mysql</prop>
+                            <prop key="reasonable">true</prop>
+                        </props>
+                    </property>
+                </bean>
+            </array>
+        </property>
+    </bean>
+    <!--  配置扫描的类  -->
+    <bean id="MapperScannerConfigurer" class="org.mybatis.spring.mapper.MapperScannerConfigurer">
+        <property name="basePackage" value="dao"></property>
+    </bean>
+
+    <!-- spring中的事务控制   -->
+    <!-- 配置事务管理器  -->
+    <bean id="TransactionManager" class="org.springframework.jdbc.datasource.DataSourceTransactionManager">
+        <property name="dataSource" ref="druid"></property>
+    </bean>
+    <!-- 配置事务通知   -->
+    <tx:advice id="tx" transaction-manager="TransactionManager">
+        <!--配置事务的属性-->
+        <tx:attributes>
+            <tx:method name="find*" read-only="true" propagation="SUPPORTS"/>
+            <tx:method name="*" read-only="false" propagation="REQUIRED" ></tx:method>
+        </tx:attributes>
+    </tx:advice>
+    <!--  配置aop  -->
+    <aop:config>
+        <!--  配置切入点表达式      -->
+        <aop:pointcut id="impl" expression="execution(* service.impl.*.*(..))"/>
+        <!-- 建立切入点和通知的关系       -->
+        <aop:advisor advice-ref="tx" pointcut-ref="impl"></aop:advisor>
+    </aop:config>
+</beans>
